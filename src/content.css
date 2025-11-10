@@ -1,0 +1,20 @@
+/* src/content.css */
+
+/* 強制的に非表示にする要素 */
+#related,
+#secondary,
+ytd-watch-next-secondary-results-renderer {
+  display: none !important;
+}
+
+/* メインコンテンツを中央に配置 */
+ytd-watch-flexy[flexy] #columns #primary {
+  max-width: 100% !important;
+  margin: 0 auto !important;
+}
+
+/* プレイヤーを最大化 */
+#player-container {
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+}
