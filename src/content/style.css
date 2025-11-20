@@ -13,10 +13,19 @@ ytd-guide-entry-renderer:has(a[title="Shorts"]) {
   display: none !important;
 }
 
-/* 登録チャンネルセクション全体を非表示 */
-ytd-guide-section-renderer:has(#sections > ytd-guide-collapsible-entry-renderer) {
+/* ミニガイド（縮小サイドバー）のホームを非表示 */
+ytd-mini-guide-entry-renderer:has(a[href="/"]) {
   display: none !important;
 }
+
+/* ミニガイドのショートを非表示 */
+ytd-mini-guide-entry-renderer:has(a[href="/shorts/"]),
+ytd-mini-guide-entry-renderer:has(a[aria-label="ショート"]),
+ytd-mini-guide-entry-renderer:has(a[aria-label="Shorts"]) {
+  display: none !important;
+}
+
+/* 登録チャンネルセクションは表示（個別のチャンネルをJSでフィルタリング） */
 
 /* リコメンド欄を非表示 */
 #related,

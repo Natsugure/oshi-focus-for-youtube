@@ -21,10 +21,19 @@ const injectStyles = () => {
       display: none !important;
     }
 
-    /* 登録チャンネルセクション全体を非表示 */
-    ytd-guide-section-renderer:has(#sections > ytd-guide-collapsible-entry-renderer) {
+    /* ミニガイド（縮小サイドバー）のホームを非表示 */
+    ytd-mini-guide-entry-renderer:has(a[href="/"]) {
       display: none !important;
     }
+
+    /* ミニガイドのショートを非表示 */
+    ytd-mini-guide-entry-renderer:has(a[href="/shorts/"]),
+    ytd-mini-guide-entry-renderer:has(a[aria-label="ショート"]),
+    ytd-mini-guide-entry-renderer:has(a[aria-label="Shorts"]) {
+      display: none !important;
+    }
+
+    /* 登録チャンネルセクションは表示（個別のチャンネルをJSでフィルタリング） */
 
     /* リコメンド欄を非表示 */
     #related,
@@ -133,26 +142,91 @@ const filterSubscriptions = async () => {
   const data = await getStorageData();
   const allowedChannelIds = data.allowedChannels.map(ch => ch.id);
 
+  // 許可リストが空の場合は何もしない（すべて表示）
+  if (allowedChannelIds.length === 0) {
+    return;
+  }
+
+  const TARGET_VISIBLE_COUNT = 7; // 目標とする常時表示チャンネル数
+
+  let isApplyingFilter = false; // 再帰的な呼び出しを防ぐフラグ
+
+  // チャンネルをフィルタリングし、表示チャンネルを繰り上げる関数
+  const applyFilter = () => {
+    // 既に実行中の場合はスキップ
+    if (isApplyingFilter) return;
+    isApplyingFilter = true;
+
+    try {
+      const subscriptionsSection = document.querySelector('ytd-guide-collapsible-entry-renderer');
+      if (!subscriptionsSection) {
+        return;
+      }
+
+      const expandableItems = subscriptionsSection.querySelector('#expandable-items');
+      if (!expandableItems) {
+        return;
+      }
+
+      const expanderItem = subscriptionsSection.querySelector('#expander-item');
+      if (!expanderItem) {
+        return;
+      }
+
+      // すべてのチャンネルを取得
+      const allChannelItems = subscriptionsSection.querySelectorAll('ytd-guide-entry-renderer');
+
+      // 許可チャンネルのみを抽出（非表示のものも含む）
+      const allowedChannels: HTMLElement[] = [];
+      const disallowedChannels: HTMLElement[] = [];
+
+      allChannelItems.forEach((item) => {
+        const link = item.querySelector('a');
+        if (!link) {
+          return;
+        }
+
+        const href = link.getAttribute('href') || '';
+
+        // チャンネルリンクかチェック
+        if (href.includes('/@') || href.includes('/channel/')) {
+          const channelHandle = href.split('/@')[1]?.split('/')[0] ||
+                               href.split('/channel/')[1]?.split('/')[0];
+
+          if (channelHandle) {
+            const htmlItem = item as HTMLElement;
+            if (allowedChannelIds.includes(channelHandle)) {
+              allowedChannels.push(htmlItem);
+              // 表示
+              htmlItem.style.display = '';
+            } else {
+              disallowedChannels.push(htmlItem);
+              // 非表示
+              htmlItem.style.display = 'none';
+            }
+          }
+        }
+      });
+
+      // 許可チャンネルの最初のTARGET_VISIBLE_COUNT個をexpanderItemの前に移動
+      const channelsToPromote = allowedChannels.slice(0, TARGET_VISIBLE_COUNT);
+
+      // 次に、最初のTARGET_VISIBLE_COUNT個をexpanderItemの前に移動
+      channelsToPromote.forEach((channel) => {
+        // expanderItemの前に移動（すでにそこにあっても問題ない）
+        subscriptionsSection.insertBefore(channel, expanderItem);
+      });
+    } finally {
+      isApplyingFilter = false;
+    }
+  };
+
+  // 初回実行
+  applyFilter();
+
   // MutationObserverで動的に追加される要素も監視
   const observer = new MutationObserver(() => {
-    const channelItems = document.querySelectorAll('ytd-guide-entry-renderer');
-
-    channelItems.forEach((item) => {
-      const link = item.querySelector('a');
-      if (!link) return;
-
-      const href = link.getAttribute('href') || '';
-
-      // チャンネルリンクかチェック
-      if (href.includes('/@') || href.includes('/channel/')) {
-        const channelHandle = href.split('/@')[1]?.split('/')[0] ||
-                             href.split('/channel/')[1]?.split('/')[0];
-
-        if (channelHandle && !allowedChannelIds.includes(channelHandle)) {
-          (item as HTMLElement).style.display = 'none';
-        }
-      }
-    });
+    applyFilter();
   });
 
   // document.bodyが存在する場合のみobserveを開始
@@ -185,7 +259,11 @@ const init = async () => {
   handleShortsRedirect();
 
   // 登録チャンネルのフィルタリング
-  await filterSubscriptions();
+  try {
+    await filterSubscriptions();
+  } catch (error) {
+    console.error('Oshi Focus: Error in filterSubscriptions:', error);
+  }
 
   // 動画ページの場合はチェック
   if (window.location.pathname === '/watch') {
