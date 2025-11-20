@@ -1,34 +1,34 @@
 {
   "manifest_version": 3,
-  "name": "Oshi Focus for YouTube",
+  "name": "Oshi Focus For YouTube",
   "version": "1.0.0",
-  "description": "特定のチャンネルのみを表示し、集中を保つためのYouTube拡張機能",
+  "description": "特定のチャンネルに集中できるYouTube拡張機能",
   "permissions": [
     "storage",
-    "webNavigation"
+    "tabs",
+    "webRequest"
   ],
   "host_permissions": [
-    "*://*.youtube.com/*"
+    "https://www.youtube.com/*"
   ],
-  "background": {
-    "service_worker": "src/background.ts",
-    "type": "module"
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
-      "js": ["src/content.ts"],
-      "css": ["src/content.css"],
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["src/content/index.tsx"],
       "run_at": "document_start"
     }
   ],
-  "action": {
-    "default_popup": "index.html"
-  },
-  "options_page": "options.html",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   }
 }
