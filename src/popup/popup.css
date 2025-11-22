@@ -43,8 +43,87 @@ body {
   padding: 20px;
 }
 
+/* 表示中のチャンネルセクション */
+.current-channel-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.current-channel-section h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.current-channel-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.channel-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-details .channel-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-details .channel-id {
+  font-size: 12px;
+  color: #666;
+}
+
+.add-current-button {
+  padding: 8px 16px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.add-current-button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.add-current-button:disabled {
+  cursor: default;
+}
+
+.add-current-button.added {
+  background: #e0e0e0;
+  color: #666;
+}
+
+.no-channel-hint {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  padding: 12px;
+}
+
 .input-section {
   margin-bottom: 24px;
+}
+
+.input-section h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #333;
 }
 
 .input-group {
@@ -181,4 +260,22 @@ body {
 .popup-footer p {
   font-size: 12px;
   color: #666;
+}
+
+.settings-button {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.settings-button:hover {
+  background: #667eea;
+  color: #fff;
 }
