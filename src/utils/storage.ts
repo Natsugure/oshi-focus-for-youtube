@@ -56,11 +56,14 @@ export const saveAllowedChannels = async (channels: AllowedChannel[]): Promise<v
   await chrome.storage.sync.set({ allowedChannels: channels });
 };
 
-export const isChannelAllowed = async (channelId: string): Promise<boolean> => {
+export const isChannelAllowed = async (channelId: string, channelHandle?: string | null): Promise<boolean> => {
   const data = await getStorageData();
   // 許可リストが空の場合はすべてのチャンネルを許可
   if (data.allowedChannels.length === 0) {
     return true;
   }
-  return data.allowedChannels.some(channel => channel.id === channelId);
+  // チャンネルID（UC...形式）またはハンドル（@xxx形式）のいずれかでマッチ
+  return data.allowedChannels.some(channel =>
+    channel.id === channelId || (channelHandle && channel.id === channelHandle)
+  );
 };
