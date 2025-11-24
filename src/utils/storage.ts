@@ -7,6 +7,7 @@ export interface SideMenuSettings {
   hideHome: boolean;
   hideShorts: boolean;
   hideSubscriptions: boolean;
+  filterSubscriptionsByAllowedChannels: boolean;
   hideExploreSection: boolean;
   hideMusic: boolean;
   hideYouSection: boolean;
@@ -33,6 +34,7 @@ export const defaultSettings: Settings = {
     hideHome: true,
     hideShorts: true,
     hideSubscriptions: false,
+    filterSubscriptionsByAllowedChannels: false,
     hideExploreSection: true,
     hideMusic: true,
     hideYouSection: true,

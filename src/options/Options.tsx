@@ -252,6 +252,25 @@ const Options = () => {
           <div className="setting-item">
             <label className="toggle-label">
               <span className="setting-text">
+                <span className="setting-name">登録チャンネルを許可リストでフィルタ</span>
+                <span className="setting-description">
+                  許可チャンネルのみをサイドメニューの登録チャンネル一覧に表示します
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.sideMenu.filterSubscriptionsByAllowedChannels}
+                onChange={(e) =>
+                  handleSideMenuChange('filterSubscriptionsByAllowedChannels', e.target.checked)
+                }
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div className="setting-item">
+            <label className="toggle-label">
+              <span className="setting-text">
                 <span className="setting-name">探索</span>
                 <span className="setting-description">
                   音楽・ゲーム・スポーツなどのセクション
