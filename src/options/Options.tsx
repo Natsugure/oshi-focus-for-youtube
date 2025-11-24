@@ -326,6 +326,25 @@ const Options = () => {
             これらのチャンネルの動画のみ視聴できます
           </p>
 
+          <div className="setting-item">
+            <label className="toggle-label">
+              <span className="setting-text">
+                <span className="setting-name">許可チャンネル以外の再生をブロック</span>
+                <span className="setting-description">
+                  オン時は許可チャンネルのみ視聴可能。オフ時はすべてのチャンネルを視聴可能
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.blockNonAllowedChannels}
+                onChange={(e) =>
+                  handleSettingChange('blockNonAllowedChannels', e.target.checked)
+                }
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+
           <div className="input-section">
             <div className="input-group">
               <label>チャンネルURL / ID</label>

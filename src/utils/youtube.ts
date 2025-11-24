@@ -142,3 +142,88 @@ export const getChannelHandleFromPage = (): string | null => {
   }
   return null;
 };
+
+// チャンネルページからチャンネル情報を取得
+export const getChannelInfoFromChannelPage = (): { handle: string | null; name: string | null } => {
+  const url = window.location.href;
+
+  let handle: string | null = null;
+
+  // 優先順位1: URLから@handleを抽出
+  const handleMatch = url.match(/\/@([^\/\?]+)/);
+  if (handleMatch) {
+    handle = handleMatch[1];
+    console.log('[Oshi Focus] Found handle from URL:', handle);
+  }
+
+  // 優先順位2: /channel/UC...形式の場合、DOM内から@handleを探す
+  if (!handle) {
+    const channelIdMatch = url.match(/\/channel\/([^\/\?]+)/);
+    if (channelIdMatch) {
+      // 方法2-1: yt-content-metadata-view-modelから@handleテキストを探す
+      const metadataElements = document.querySelectorAll('yt-content-metadata-view-model .yt-core-attributed-string');
+      for (const element of metadataElements) {
+        const text = element.textContent?.trim() || '';
+        if (text.startsWith('@')) {
+          handle = text.substring(1); // @を除去
+          console.log('[Oshi Focus] Found handle from metadata:', handle);
+          break;
+        }
+      }
+
+      // 方法2-2: 検索フォームのactionから@handleを取得
+      if (!handle) {
+        const searchForm = document.querySelector('form[action*="/@"]') as HTMLFormElement | null;
+        if (searchForm) {
+          const actionUrl = searchForm.getAttribute('action') || '';
+          const actionHandleMatch = actionUrl.match(/\/@([^\/\?]+)/);
+          if (actionHandleMatch) {
+            handle = actionHandleMatch[1];
+            console.log('[Oshi Focus] Found handle from search form:', handle);
+          }
+        }
+      }
+
+      // 見つからない場合はUC...形式をフォールバックとして使用
+      if (!handle) {
+        handle = channelIdMatch[1];
+        console.log('[Oshi Focus] Using channel ID from URL (fallback):', handle);
+      }
+    }
+  }
+
+  // チャンネル名を取得（複数の方法を試す）
+  let name: string | null = null;
+
+  // 方法1: yt-dynamic-text-view-modelから取得
+  const dynamicTextElement = document.querySelector('yt-dynamic-text-view-model h1 .yt-core-attributed-string') as HTMLElement | null;
+  if (dynamicTextElement) {
+    // テキストから公式マークなどを除去
+    let text = dynamicTextElement.textContent?.trim() || '';
+    // "チャンネル名、公式アーティスト チャンネル" のような形式から最初の部分のみ取得
+    const commaIndex = text.indexOf('、');
+    if (commaIndex > 0) {
+      text = text.substring(0, commaIndex);
+    }
+    name = text || null;
+  }
+
+  // 方法2: meta tagから取得
+  if (!name) {
+    const metaTitle = document.querySelector('meta[property="og:title"]') as HTMLMetaElement | null;
+    if (metaTitle) {
+      name = metaTitle.content.trim();
+    }
+  }
+
+  // 方法3: title tagから取得
+  if (!name) {
+    const titleMatch = document.title.match(/^([^-]+)/);
+    if (titleMatch) {
+      name = titleMatch[1].trim();
+    }
+  }
+
+  console.log('[Oshi Focus] Channel page info:', { handle, name });
+  return { handle, name };
+};

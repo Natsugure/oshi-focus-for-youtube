@@ -1,5 +1,5 @@
 import { isChannelAllowed, getStorageData, Settings, defaultSettings } from '../utils/storage';
-import { extractVideoId, convertShortsToWatch, getChannelIdFromPage, getChannelHandleFromPage } from '../utils/youtube';
+import { extractVideoId, convertShortsToWatch, getChannelIdFromPage, getChannelHandleFromPage, getChannelInfoFromChannelPage } from '../utils/youtube';
 import './style.css';
 
 // 現在の設定をキャッシュ
@@ -709,17 +709,16 @@ const getCurrentChannelInfo = (): { id: string | null; name: string | null } => 
 
   // チャンネルページの場合
   if (url.includes('/@') || url.includes('/channel/')) {
-    const channelId = url.match(/@([^\/\?]+)/)?.[1] ||
-                      url.match(/\/channel\/([^\/\?]+)/)?.[1] || null;
-    // チャンネル名を取得
-    const channelName = document.querySelector('yt-formatted-string.ytd-channel-name')?.textContent?.trim() ||
-                        document.querySelector('#channel-name')?.textContent?.trim() || null;
-    return { id: channelId, name: channelName };
+    const info = getChannelInfoFromChannelPage();
+    return { id: info.handle, name: info.name };
   }
 
   // 動画ページの場合
   if (window.location.pathname === '/watch') {
-    const channelId = getChannelIdFromPage();
+    // @handle形式を優先、なければchannelIdを使用
+    const channelHandle = getChannelHandleFromPage();
+    const channelId = channelHandle || getChannelIdFromPage();
+
     // チャンネル名を取得
     const channelName = document.querySelector('#owner #channel-name a')?.textContent?.trim() ||
                         document.querySelector('ytd-channel-name a')?.textContent?.trim() || null;

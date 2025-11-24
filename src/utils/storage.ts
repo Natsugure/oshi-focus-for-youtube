@@ -18,6 +18,7 @@ export interface Settings {
   convertShortsToNormal: boolean;
   blockShortsCompletely: boolean;
   redirectHomeToSubscriptions: boolean;
+  blockNonAllowedChannels: boolean;
   sideMenu: SideMenuSettings;
 }
 
@@ -30,6 +31,7 @@ export const defaultSettings: Settings = {
   convertShortsToNormal: true,
   blockShortsCompletely: false,
   redirectHomeToSubscriptions: true,
+  blockNonAllowedChannels: false,
   sideMenu: {
     hideHome: true,
     hideShorts: true,
@@ -60,10 +62,18 @@ export const saveAllowedChannels = async (channels: AllowedChannel[]): Promise<v
 
 export const isChannelAllowed = async (channelId: string, channelHandle?: string | null): Promise<boolean> => {
   const data = await getStorageData();
-  // 許可リストが空の場合はすべてのチャンネルを許可
-  if (data.allowedChannels.length === 0) {
+
+  // ブロック設定がオフの場合は、許可リストに関係なくすべてのチャンネルを許可
+  if (!data.settings.blockNonAllowedChannels) {
     return true;
   }
+
+  // ブロック設定がオンの場合
+  // 許可リストが空の場合はすべてのチャンネルをブロック
+  if (data.allowedChannels.length === 0) {
+    return false;
+  }
+
   // チャンネルID（UC...形式）またはハンドル（@xxx形式）のいずれかでマッチ
   return data.allowedChannels.some(channel =>
     channel.id === channelId || (channelHandle && channel.id === channelHandle)
