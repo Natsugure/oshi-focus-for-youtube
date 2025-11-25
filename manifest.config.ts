@@ -1,28 +1,50 @@
 import { defineManifest } from '@crxjs/vite-plugin'
-import pkg from './package.json'
 
 export default defineManifest({
   manifest_version: 3,
-  name: pkg.name,
-  version: pkg.version,
-  icons: {
-    48: 'public/logo.png',
-  },
-  action: {
-    default_icon: {
-      48: 'public/logo.png',
-    },
-    default_popup: 'src/popup/index.html',
-  },
+  name: 'Oshi Focus For YouTube',
+  version: '1.0.0',
+  description: '特定のチャンネルに集中できるYouTube拡張機能',
+
   permissions: [
-    'sidePanel',
-    'contentSettings',
+    'storage',
+    'activeTab'
   ],
-  content_scripts: [{
-    js: ['src/content/main.tsx'],
-    matches: ['https://*/*'],
-  }],
-  side_panel: {
-    default_path: 'src/sidepanel/index.html',
+
+  host_permissions: [
+    'https://www.youtube.com/*'
+  ],
+
+  action: {
+    default_popup: 'index.html',
+    default_icon: {
+      '16': 'icon16.png',
+      '48': 'icon48.png',
+      '128': 'icon128.png'
+    }
   },
+
+  options_ui: {
+    page: 'options.html',
+    open_in_tab: true
+  },
+
+  background: {
+    service_worker: 'src/background/index.ts',
+    type: 'module'
+  },
+
+  content_scripts: [
+    {
+      matches: ['https://www.youtube.com/*'],
+      js: ['src/content/index.tsx'],
+      run_at: 'document_start'
+    }
+  ],
+
+  icons: {
+    '16': 'icon16.png',
+    '48': 'icon48.png',
+    '128': 'icon128.png'
+  }
 })

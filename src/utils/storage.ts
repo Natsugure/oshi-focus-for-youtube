@@ -1,76 +1,81 @@
-// src/utils/storage.ts
-export interface ExtensionSettings {
-  allowedChannels: string[]; // チャンネルID（例: UC1234567890）
+export interface AllowedChannel {
+  id: string;
+  name: string;
 }
 
-export const defaultSettings: ExtensionSettings = {
-  allowedChannels: []
+export interface SideMenuSettings {
+  hideHome: boolean;
+  hideShorts: boolean;
+  hideSubscriptions: boolean;
+  filterSubscriptionsByAllowedChannels: boolean;
+  hideExploreSection: boolean;
+  hideMusic: boolean;
+  hideYouSection: boolean;
+  hideRecommendations: boolean;
+}
+
+export interface Settings {
+  convertShortsToNormal: boolean;
+  blockShortsCompletely: boolean;
+  redirectHomeToSubscriptions: boolean;
+  blockNonAllowedChannels: boolean;
+  sideMenu: SideMenuSettings;
+}
+
+export interface StorageData {
+  allowedChannels: AllowedChannel[];
+  settings: Settings;
+}
+
+export const defaultSettings: Settings = {
+  convertShortsToNormal: true,
+  blockShortsCompletely: false,
+  redirectHomeToSubscriptions: true,
+  blockNonAllowedChannels: false,
+  sideMenu: {
+    hideHome: true,
+    hideShorts: true,
+    hideSubscriptions: false,
+    filterSubscriptionsByAllowedChannels: false,
+    hideExploreSection: true,
+    hideMusic: true,
+    hideYouSection: true,
+    hideRecommendations: true,
+  },
 };
 
-export async function getSettings(): Promise<ExtensionSettings> {
-  const result = await chrome.storage.sync.get('settings');
-  return result.settings || defaultSettings;
-}
+export const getStorageData = async (): Promise<StorageData> => {
+  const result = await chrome.storage.sync.get(['allowedChannels', 'settings']);
+  return {
+    allowedChannels: result.allowedChannels || [],
+    settings: { ...defaultSettings, ...result.settings },
+  };
+};
 
-export async function saveSettings(settings: ExtensionSettings): Promise<void> {
+export const saveSettings = async (settings: Settings): Promise<void> => {
   await chrome.storage.sync.set({ settings });
-}
+};
 
-export function isAllowedChannel(channelId: string, settings: ExtensionSettings): boolean {
-  if (settings.allowedChannels.length === 0) {
-    return true; // 設定がない場合は全て許可
-  }
-  return settings.allowedChannels.includes(channelId);
-}
+export const saveAllowedChannels = async (channels: AllowedChannel[]): Promise<void> => {
+  await chrome.storage.sync.set({ allowedChannels: channels });
+};
 
-// チャンネルIDを抽出する関数
-export function extractChannelId(url: string): string | null {
-  // URLからチャンネルIDを抽出
-  const patterns = [
-    /youtube\.com\/channel\/(UC[\w-]+)/,
-    /youtube\.com\/@([\w-]+)/,
-    /youtube\.com\/c\/([\w-]+)/,
-    /youtube\.com\/user\/([\w-]+)/
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      return match[1];
-    }
-  }
-  
-  return null;
-}
+export const isChannelAllowed = async (channelId: string, channelHandle?: string | null): Promise<boolean> => {
+  const data = await getStorageData();
 
-// 動画URLからチャンネルIDを取得（ページ内のDOM要素から）
-export function getChannelIdFromPage(): string | null {
-  // チャンネルリンクを探す
-  const channelLink = document.querySelector('a.yt-simple-endpoint.style-scope.yt-formatted-string[href*="/channel/"]') as HTMLAnchorElement;
-  if (channelLink) {
-    const match = channelLink.href.match(/\/channel\/(UC[\w-]+)/);
-    if (match) {
-      return match[1];
-    }
+  // ブロック設定がオフの場合は、許可リストに関係なくすべてのチャンネルを許可
+  if (!data.settings.blockNonAllowedChannels) {
+    return true;
   }
-  
-  // メタタグから取得を試みる
-  const channelIdMeta = document.querySelector('meta[itemprop="channelId"]') as HTMLMetaElement;
-  if (channelIdMeta) {
-    return channelIdMeta.content;
+
+  // ブロック設定がオンの場合
+  // 許可リストが空の場合はすべてのチャンネルをブロック
+  if (data.allowedChannels.length === 0) {
+    return false;
   }
-  
-  // ytInitialDataから取得を試みる
-  const scripts = document.querySelectorAll('script');
-  for (const script of scripts) {
-    const content = script.textContent || '';
-    if (content.includes('ytInitialData')) {
-      const match = content.match(/"channelId":"(UC[\w-]+)"/);
-      if (match) {
-        return match[1];
-      }
-    }
-  }
-  
-  return null;
-}
+
+  // チャンネルID（UC...形式）またはハンドル（@xxx形式）のいずれかでマッチ
+  return data.allowedChannels.some(channel =>
+    channel.id === channelId || (channelHandle && channel.id === channelHandle)
+  );
+};
