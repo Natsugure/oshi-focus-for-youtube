@@ -1,6 +1,7 @@
 import { isChannelAllowed, getStorageData, Settings, defaultSettings } from '../utils/storage';
 import { extractVideoId, convertShortsToWatch, getChannelIdFromPage, getChannelHandleFromPage, getChannelInfoFromChannelPage } from '../utils/youtube';
 import { blockManager } from './blocker';
+import { subscriptionFilterManager } from './subscriptionFilter';
 import './style.css';
 
 // 現在の設定をキャッシュ
@@ -36,7 +37,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
     // 設定または許可チャンネルが変更された場合、フィルタリングを再実行
     if (changes.settings || changes.allowedChannels) {
-      filterSubscriptions();
+      subscriptionFilterManager.startFiltering();
     }
   }
 });
@@ -209,245 +210,6 @@ const checkVideoPage = async () => {
   await checkChannel();
 };
 
-// 登録チャンネルのフィルタリング用の状態管理
-let subscriptionFilterObserver: MutationObserver | null = null;
-let isApplyingSubscriptionFilter = false;
-let subscriptionFilterTimeout: ReturnType<typeof setTimeout> | null = null;
-let guideObserver: MutationObserver | null = null;
-
-// すべてのチャンネルを表示状態に戻す
-const resetSubscriptionFilter = () => {
-  // 登録チャンネルセクション全体を取得（ytd-guide-section-rendererで登録チャンネルを含むもの）
-  const subscriptionsSections = document.querySelectorAll('ytd-guide-section-renderer');
-  subscriptionsSections.forEach((section) => {
-    const allChannelItems = section.querySelectorAll('ytd-guide-entry-renderer');
-    allChannelItems.forEach((item) => {
-      (item as HTMLElement).style.display = '';
-    });
-  });
-};
-
-// サイドバー監視用のObserver
-let sidebarObserver: MutationObserver | null = null;
-
-// 登録チャンネルセクションを見つける（登録チャンネルへのリンクを含むセクション）
-const findSubscriptionsSection = (): Element | null => {
-  // 登録チャンネルヘッダーを含むセクションを探す
-  const sections = document.querySelectorAll('ytd-guide-section-renderer');
-  for (const section of sections) {
-    // 登録チャンネルへのリンク（/feed/channels）を含むセクションを探す
-    const channelLink = section.querySelector('a[href="/feed/channels"]');
-    if (channelLink) {
-      return section;
-    }
-  }
-  return null;
-};
-
-// 登録チャンネルのフィルタリング
-const filterSubscriptions = async () => {
-  const data = await getStorageData();
-  const allowedChannelIds = data.allowedChannels.map(ch => ch.id);
-
-  // すべてのObserverを停止するヘルパー関数
-  const stopAllObservers = () => {
-    if (subscriptionFilterObserver) {
-      subscriptionFilterObserver.disconnect();
-      subscriptionFilterObserver = null;
-    }
-    if (sidebarObserver) {
-      sidebarObserver.disconnect();
-      sidebarObserver = null;
-    }
-    if (guideObserver) {
-      guideObserver.disconnect();
-      guideObserver = null;
-    }
-  };
-
-  // フィルタ設定が無効、または許可リストが空の場合はすべて表示に戻す
-  if (!data.settings.sideMenu.filterSubscriptionsByAllowedChannels || allowedChannelIds.length === 0) {
-    resetSubscriptionFilter();
-    stopAllObservers();
-    return;
-  }
-
-  const TARGET_VISIBLE_COUNT = 7;
-
-  // チャンネルをフィルタリングし、表示チャンネルを繰り上げる関数
-  const applyFilter = () => {
-    // 既に実行中の場合はスキップ
-    if (isApplyingSubscriptionFilter) return;
-    isApplyingSubscriptionFilter = true;
-
-    try {
-      const subscriptionsSection = findSubscriptionsSection();
-      if (!subscriptionsSection) {
-        return;
-      }
-
-      // #items内の要素を取得
-      const itemsContainer = subscriptionsSection.querySelector('#items');
-      if (!itemsContainer) {
-        return;
-      }
-
-      // 「もっと見る」ボタン（ytd-guide-collapsible-entry-renderer）を取得
-      const collapsibleEntry = itemsContainer.querySelector('ytd-guide-collapsible-entry-renderer');
-
-      // すべてのチャンネルを取得（#items直下とcollapsible内の両方）
-      const allChannelItems = itemsContainer.querySelectorAll('ytd-guide-entry-renderer');
-
-      // 許可チャンネルのみを抽出（非表示のものも含む）
-      const allowedChannels: HTMLElement[] = [];
-
-      allChannelItems.forEach((item) => {
-        const link = item.querySelector('a');
-        if (!link) return;
-
-        const href = link.getAttribute('href') || '';
-
-        // チャンネルリンクかチェック（/@xxxまたは/channel/xxx形式）
-        // ただし、特殊なリンク（/feed/channels, もっと見る, 折りたたむ）は除外
-        if ((href.includes('/@') || href.includes('/channel/')) && !href.includes('/feed/')) {
-          const channelHandle = href.split('/@')[1]?.split('/')[0] ||
-                               href.split('/channel/')[1]?.split('/')[0];
-
-          if (channelHandle) {
-            const htmlItem = item as HTMLElement;
-            // allowedChannelIdsには@なしで保存されているはず
-            // ただし念のため、@付きでも@なしでもマッチするようにする
-            const handleWithoutAt = channelHandle.startsWith('@') ? channelHandle.substring(1) : channelHandle;
-            const isAllowed = allowedChannelIds.some(id => {
-              const idWithoutAt = id.startsWith('@') ? id.substring(1) : id;
-              return idWithoutAt === handleWithoutAt;
-            });
-
-            if (isAllowed) {
-              allowedChannels.push(htmlItem);
-              htmlItem.style.display = '';
-            } else {
-              htmlItem.style.display = 'none';
-            }
-          }
-        }
-      });
-
-      // 許可チャンネルの最初のTARGET_VISIBLE_COUNT個をcollapsibleEntryの前に移動
-      if (collapsibleEntry) {
-        const channelsToPromote = allowedChannels.slice(0, TARGET_VISIBLE_COUNT);
-        channelsToPromote.forEach((channel) => {
-          itemsContainer.insertBefore(channel, collapsibleEntry);
-        });
-      }
-    } finally {
-      // 少し遅延してフラグをリセット（DOM変更による再トリガーを防ぐ）
-      setTimeout(() => {
-        isApplyingSubscriptionFilter = false;
-      }, 300);
-    }
-  };
-
-  // デバウンス付きのフィルタ実行
-  const debouncedApplyFilter = () => {
-    if (subscriptionFilterTimeout) {
-      clearTimeout(subscriptionFilterTimeout);
-    }
-    subscriptionFilterTimeout = setTimeout(() => {
-      applyFilter();
-    }, 300);
-  };
-
-  // 既存のObserverを停止
-  stopAllObservers();
-
-  // サイドバー（ytd-guide-renderer）の開閉を監視する関数
-  const setupGuideObserver = () => {
-    const guideRenderer = document.querySelector('ytd-app');
-    if (!guideRenderer) return;
-
-    guideObserver = new MutationObserver(() => {
-      // サイドバーが開かれた時にフィルタを適用
-      const guide = document.querySelector('tp-yt-app-drawer[opened]');
-      if (guide) {
-        // サイドバーが開かれた状態で少し待ってからフィルタを適用
-        setTimeout(() => {
-          debouncedApplyFilter();
-        }, 100);
-      }
-    });
-
-    guideObserver.observe(guideRenderer, {
-      attributes: true,
-      subtree: true,
-      attributeFilter: ['opened']
-    });
-  };
-
-  // 登録チャンネルセクションが存在するかチェック
-  const subscriptionsSection = findSubscriptionsSection();
-
-  if (subscriptionsSection) {
-    // 初回実行
-    applyFilter();
-
-    // サイドバーの開閉を監視
-    setupGuideObserver();
-
-    // MutationObserverで動的に追加される要素も監視
-    const collapsibleEntry = subscriptionsSection.querySelector('ytd-guide-collapsible-entry-renderer');
-    if (collapsibleEntry) {
-      const expandableItems = collapsibleEntry.querySelector('#expandable-items');
-      if (expandableItems) {
-        subscriptionFilterObserver = new MutationObserver(() => {
-          debouncedApplyFilter();
-        });
-        subscriptionFilterObserver.observe(expandableItems, {
-          childList: true
-        });
-      }
-    }
-  } else {
-    // サイドバーがまだ存在しない場合、ytd-appを監視してサイドバーが追加されるのを待つ
-    const ytdApp = document.querySelector('ytd-app');
-    if (ytdApp) {
-      sidebarObserver = new MutationObserver(() => {
-        const section = findSubscriptionsSection();
-        if (section) {
-          // サイドバーが見つかったらsidebarObserverを停止
-          if (sidebarObserver) {
-            sidebarObserver.disconnect();
-            sidebarObserver = null;
-          }
-
-          // 初回実行
-          applyFilter();
-
-          // サイドバーの開閉を監視
-          setupGuideObserver();
-
-          // #expandable-itemsのみを監視
-          const collapsibleEntry = section.querySelector('ytd-guide-collapsible-entry-renderer');
-          if (collapsibleEntry) {
-            const expandableItems = collapsibleEntry.querySelector('#expandable-items');
-            if (expandableItems) {
-              subscriptionFilterObserver = new MutationObserver(() => {
-                debouncedApplyFilter();
-              });
-              subscriptionFilterObserver.observe(expandableItems, {
-                childList: true
-              });
-            }
-          }
-        }
-      });
-      sidebarObserver.observe(ytdApp, {
-        childList: true,
-        subtree: true
-      });
-    }
-  }
-};
 
 // ショート動画の処理
 const handleShorts = async () => {
@@ -560,9 +322,9 @@ const init = async () => {
 
   // 登録チャンネルのフィルタリング
   try {
-    await filterSubscriptions();
+    await subscriptionFilterManager.startFiltering();
   } catch (error) {
-    console.error('Oshi Focus: Error in filterSubscriptions:', error);
+    console.error('Oshi Focus: Error in subscriptionFilterManager:', error);
   }
 
   // 動画ページの場合はチェック
