@@ -1,5 +1,6 @@
 import { isChannelAllowed, getStorageData, Settings, defaultSettings } from '../utils/storage';
 import { extractVideoId, convertShortsToWatch, getChannelIdFromPage, getChannelHandleFromPage, getChannelInfoFromChannelPage } from '../utils/youtube';
+import { blockManager } from './blocker';
 import './style.css';
 
 // 現在の設定をキャッシュ
@@ -152,93 +153,10 @@ const generateStyles = (settings: Settings): string => {
   return css;
 };
 
-// ページがブロックされているかどうかのフラグ
-let isPageBlocked = false;
-
-// メディアキー・スペースキーのイベントハンドラ
-const blockMediaKeyHandler = (e: KeyboardEvent) => {
-  // スペースキー、メディアキー、矢印キーなどをブロック
-  const blockedKeys = [
-    ' ', 'Space',           // スペースキー（再生/一時停止）
-    'k', 'K',               // YouTubeの再生/一時停止ショートカット
-    'j', 'J', 'l', 'L',     // YouTubeの巻き戻し/早送り
-    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-    'm', 'M',               // ミュート
-    'MediaPlayPause', 'MediaStop', 'MediaTrackNext', 'MediaTrackPrevious'
-  ];
-
-  if (blockedKeys.includes(e.key) || blockedKeys.includes(e.code)) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-  }
-};
-
-// 動画再生イベントを監視して強制停止するためのリスナー
-const blockVideoPlayHandler = (e: Event) => {
-  const video = e.target as HTMLVideoElement;
-  video.pause();
-};
-
-// ブロックオーバーレイを削除
-const removeBlockedOverlay = () => {
-  const overlay = document.getElementById('oshi-focus-blocked-overlay');
-  if (overlay) {
-    overlay.remove();
-    isPageBlocked = false;
-    // キーボードイベントのブロックを解除
-    document.removeEventListener('keydown', blockMediaKeyHandler, true);
-    // 動画再生イベントのブロックを解除
-    const videos = document.querySelectorAll('video');
-    videos.forEach(video => {
-      video.removeEventListener('play', blockVideoPlayHandler, true);
-    });
-  }
-};
-
-// 動画を強制停止し、キーボード操作をブロック
-const pauseAllVideos = () => {
-  const videos = document.querySelectorAll('video');
-  videos.forEach(video => {
-    video.pause();
-    // 再生が開始されたら即座に停止するリスナーを追加
-    video.addEventListener('play', blockVideoPlayHandler, true);
-  });
-  // キーボードイベントをブロック（captureフェーズで捕捉）
-  document.addEventListener('keydown', blockMediaKeyHandler, true);
-};
-
-// ブロックメッセージを表示（オーバーレイ形式）
-const showBlockedMessage = () => {
-  if (isPageBlocked) return;
-
-  isPageBlocked = true;
-
-  // 既存のオーバーレイがあれば削除
-  removeBlockedOverlay();
-
-  // 動画を停止
-  pauseAllVideos();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'oshi-focus-blocked-overlay';
-  overlay.className = 'oshi-focus-blocked';
-  overlay.innerHTML = `
-    <h1>🚫 このコンテンツは表示できません</h1>
-    <p>許可されたチャンネルの動画のみ視聴できます</p>
-    <button id="oshi-focus-settings">設定を開く</button>
-  `;
-
-  document.body.appendChild(overlay);
-
-  document.getElementById('oshi-focus-settings')?.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-  });
-};
-
 // 動画ページのチェック
 const checkVideoPage = async () => {
-  const videoId = extractVideoId(window.location.href);
+  const initialUrl = window.location.href;
+  const videoId = extractVideoId(initialUrl);
   if (!videoId) return;
 
   // チャンネル情報を取得するまで待機
@@ -246,17 +164,30 @@ const checkVideoPage = async () => {
   const maxAttempts = 20;
 
   const checkChannel = async (): Promise<void> => {
+    // URLが変わった場合は処理を中断
+    if (window.location.href !== initialUrl) {
+      return;
+    }
+
     const channelId = getChannelIdFromPage();
     const channelHandle = getChannelHandleFromPage();
 
-    console.log('[Oshi Focus] checkVideoPage attempt', attempts, '- channelId:', channelId, 'channelHandle:', channelHandle);
-
     // チャンネル情報（IDまたはハンドル）が取得できた場合、許可チェック
     if (channelId || channelHandle) {
+      // 再度URLを確認（非同期処理中に変わっている可能性）
+      if (window.location.href !== initialUrl) {
+        return;
+      }
+
       const allowed = await isChannelAllowed(channelId || '', channelHandle);
-      console.log('[Oshi Focus] Channel allowed:', allowed);
+
+      // 許可チェック後もURLを確認
+      if (window.location.href !== initialUrl) {
+        return;
+      }
+
       if (!allowed) {
-        showBlockedMessage();
+        blockManager.showBlockMessage('unauthorized-channel');
       }
       return;
     }
@@ -273,7 +204,6 @@ const checkVideoPage = async () => {
     }
 
     // 最大リトライ回数に達してもチャンネル情報が取得できない場合
-    console.log('[Oshi Focus] Max attempts reached for watch page, could not get channel info');
   };
 
   await checkChannel();
@@ -519,52 +449,25 @@ const filterSubscriptions = async () => {
   }
 };
 
-// ショート動画のブロックメッセージを表示（オーバーレイ形式）
-const showShortsBlockedMessage = () => {
-  if (isPageBlocked) return;
-
-  isPageBlocked = true;
-
-  // 既存のオーバーレイがあれば削除
-  removeBlockedOverlay();
-
-  // 動画を停止
-  pauseAllVideos();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'oshi-focus-blocked-overlay';
-  overlay.className = 'oshi-focus-blocked';
-  overlay.innerHTML = `
-    <h1>🚫 ショート動画はブロックされています</h1>
-    <p>ショート動画の再生は設定で無効にされています</p>
-    <button id="oshi-focus-settings">設定を開く</button>
-  `;
-
-  document.body.appendChild(overlay);
-
-  document.getElementById('oshi-focus-settings')?.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-  });
-};
-
 // ショート動画の処理
 const handleShorts = async () => {
-  if (!window.location.href.includes('/shorts/')) {
+  const initialUrl = window.location.href;
+  if (!initialUrl.includes('/shorts/')) {
     return;
   }
-
-  console.log('[Oshi Focus] handleShorts: started at', Date.now());
 
   // チャンネル情報を取得するまで待機
   let attempts = 0;
   const maxAttempts = 20;
-  const startTime = Date.now();
 
   const checkAndHandle = async (): Promise<void> => {
+    // URLが変わった場合は処理を中断
+    if (window.location.href !== initialUrl) {
+      return;
+    }
+
     const channelId = getChannelIdFromPage();
     const channelHandle = getChannelHandleFromPage();
-
-    console.log('[Oshi Focus] handleShorts attempt', attempts, '- channelId:', channelId, 'channelHandle:', channelHandle, 'elapsed:', Date.now() - startTime, 'ms');
 
     // チャンネル情報（IDまたはハンドル）が取得できない場合はリトライ
     if (!channelId && !channelHandle && attempts < maxAttempts) {
@@ -579,27 +482,40 @@ const handleShorts = async () => {
 
     // チャンネル情報が取得できた場合、許可チェック
     if (channelId || channelHandle) {
+      // URLを再確認
+      if (window.location.href !== initialUrl) {
+        return;
+      }
+
       const allowed = await isChannelAllowed(channelId || '', channelHandle);
-      console.log('[Oshi Focus] Channel allowed:', allowed);
+
+      // 許可チェック後もURLを確認
+      if (window.location.href !== initialUrl) {
+        return;
+      }
+
       if (allowed) {
         // 許可チャンネルの場合は通常動画形式にリダイレクト
         const newUrl = convertShortsToWatch(window.location.href);
         if (newUrl !== window.location.href) {
-          console.log('[Oshi Focus] Redirecting to:', newUrl);
           window.location.replace(newUrl);
         }
         return;
       }
       // 許可されていないチャンネルの場合はブロック
-      showBlockedMessage();
+      blockManager.showBlockMessage('unauthorized-channel');
       return;
     }
 
     // 最大リトライ回数に達してもチャンネル情報が取得できない場合
-    console.log('[Oshi Focus] Max attempts reached, applying fallback behavior');
+    // URLを再確認
+    if (window.location.href !== initialUrl) {
+      return;
+    }
+
     // 完全ブロックが有効な場合はブロックメッセージを表示
     if (currentSettings.blockShortsCompletely) {
-      showShortsBlockedMessage();
+      blockManager.showBlockMessage('shorts-blocked');
       return;
     }
 
@@ -631,8 +547,6 @@ const handleHomeRedirect = () => {
 
 // 初期化
 const init = async () => {
-  console.log('Oshi Focus For YouTube: Initialized');
-
   // CSSスタイルを注入（設定の読み込みも行う）
   await injectStyles();
 
@@ -664,11 +578,13 @@ const setupUrlObserver = () => {
 
   const urlObserver = new MutationObserver(() => {
     const currentUrl = window.location.href;
+
+    // URLが変更された場合（パスまたはクエリパラメータ）
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
 
-      // ブロックオーバーレイを削除
-      removeBlockedOverlay();
+      // URL変更時は常にブロックオーバーレイを削除
+      blockManager.removeBlockOverlay();
 
       // 前回のタイマーをクリア
       if (navigationTimeout) {
@@ -680,8 +596,6 @@ const setupUrlObserver = () => {
 
       // ページ遷移後、DOMが更新されるまで待機してからチェック
       navigationTimeout = setTimeout(() => {
-        console.log('[Oshi Focus] Navigation delay completed, checking page...');
-
         // ショート動画の処理
         if (window.location.pathname.startsWith('/shorts/')) {
           handleShorts();
