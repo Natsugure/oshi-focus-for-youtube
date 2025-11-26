@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Oshi Focus For YouTube",
   "version": "1.0.0",
-  "description": "特定のチャンネルに集中できるYouTube拡張機能",
+  "description": "YouTube Extension for Focusing on Your Oshi Channels",
   "permissions": [
     "storage",
     "tabs",

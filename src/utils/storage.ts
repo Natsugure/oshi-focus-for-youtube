@@ -9,7 +9,7 @@ export interface SideMenuSettings {
   hideSubscriptions: boolean;
   filterSubscriptionsByAllowedChannels: boolean;
   hideExploreSection: boolean;
-  hideMusic: boolean;
+  hideOtherYouTubeServices: boolean;
   hideYouSection: boolean;
   hideRecommendations: boolean;
 }
@@ -38,7 +38,7 @@ export const defaultSettings: Settings = {
     hideSubscriptions: false,
     filterSubscriptionsByAllowedChannels: false,
     hideExploreSection: true,
-    hideMusic: true,
+    hideOtherYouTubeServices: true,
     hideYouSection: true,
     hideRecommendations: true,
   },

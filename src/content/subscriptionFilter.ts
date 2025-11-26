@@ -35,9 +35,14 @@ export class SubscriptionFilterManager {
   private findSubscriptionsSection(): Element | null {
     const sections = document.querySelectorAll('ytd-guide-section-renderer');
     for (const section of sections) {
-      const channelLink = section.querySelector('a[href="/feed/channels"]');
-      if (channelLink) {
-        return section;
+      // 新しいDOM構造: ytd-guide-collapsible-section-entry-rendererを含むセクションが登録チャンネル
+      const collapsibleSection = section.querySelector('ytd-guide-collapsible-section-entry-renderer');
+      if (collapsibleSection) {
+        // さらに、登録チャンネルへのリンクがあるか確認
+        const subscriptionLink = collapsibleSection.querySelector('a[href="/feed/subscriptions"]');
+        if (subscriptionLink) {
+          return section;
+        }
       }
     }
     return null;
@@ -94,13 +99,13 @@ export class SubscriptionFilterManager {
         return;
       }
 
-      // 「もっと見る」ボタン（ytd-guide-collapsible-entry-renderer）を取得
+      // ytd-guide-collapsible-section-entry-renderer内の「もっと見る」ボタン
       const collapsibleEntry = itemsContainer.querySelector('ytd-guide-collapsible-entry-renderer');
 
-      // すべてのチャンネルを取得（#items直下とcollapsible内の両方）
+      // すべてのチャンネルアイテムを取得（#items直下 + collapsible-entry内の両方）
       const allChannelItems = itemsContainer.querySelectorAll('ytd-guide-entry-renderer');
 
-      // 許可チャンネルのみを抽出（非表示のものも含む）
+      // 許可チャンネルのみを抽出
       const allowedChannels: HTMLElement[] = [];
 
       allChannelItems.forEach((item) => {
@@ -110,15 +115,16 @@ export class SubscriptionFilterManager {
         const href = link.getAttribute('href') || '';
 
         // チャンネルリンクかチェック（/@xxxまたは/channel/xxx形式）
-        // ただし、特殊なリンク（/feed/channels, もっと見る, 折りたたむ）は除外
-        if ((href.includes('/@') || href.includes('/channel/')) && !href.includes('/feed/')) {
+        // 登録チャンネルボタンや特殊なリンクは除外
+        if ((href.includes('/@') || href.includes('/channel/')) &&
+            !href.includes('/feed/') &&
+            href !== '/feed/subscriptions') {
+
           const channelHandle = href.split('/@')[1]?.split('/')[0] ||
                                href.split('/channel/')[1]?.split('/')[0];
 
           if (channelHandle) {
             const htmlItem = item as HTMLElement;
-            // allowedChannelIdsには@なしで保存されているはず
-            // ただし念のため、@付きでも@なしでもマッチするようにする
             const handleWithoutAt = channelHandle.startsWith('@') ? channelHandle.substring(1) : channelHandle;
             const isAllowed = allowedChannelIds.some(id => {
               const idWithoutAt = id.startsWith('@') ? id.substring(1) : id;
@@ -201,17 +207,16 @@ export class SubscriptionFilterManager {
     this.setupGuideObserver(allowedChannelIds);
 
     // MutationObserverで動的に追加される要素も監視
-    const collapsibleEntry = subscriptionsSection.querySelector('ytd-guide-collapsible-entry-renderer');
-    if (collapsibleEntry) {
-      const expandableItems = collapsibleEntry.querySelector('#expandable-items');
-      if (expandableItems) {
-        this.subscriptionFilterObserver = new MutationObserver(() => {
-          this.debouncedApplyFilter(allowedChannelIds);
-        });
-        this.subscriptionFilterObserver.observe(expandableItems, {
-          childList: true
-        });
-      }
+    // 新しいDOM構造では #items 直下にチャンネルが追加される
+    const itemsContainer = subscriptionsSection.querySelector('#items');
+    if (itemsContainer) {
+      this.subscriptionFilterObserver = new MutationObserver(() => {
+        this.debouncedApplyFilter(allowedChannelIds);
+      });
+      this.subscriptionFilterObserver.observe(itemsContainer, {
+        childList: true,
+        subtree: true
+      });
     }
   }
 
