@@ -249,7 +249,7 @@ const Options = () => {
             </label>
           </div>
 
-          <div className="setting-item">
+          <div className="setting-item" style={{ paddingLeft: '20px' }}>
             <label className="toggle-label">
               <span className="setting-text">
                 <span className="setting-name">登録チャンネルを許可リストでフィルタ</span>
@@ -260,6 +260,7 @@ const Options = () => {
               <input
                 type="checkbox"
                 checked={settings.sideMenu.filterSubscriptionsByAllowedChannels}
+                disabled={settings.sideMenu.hideSubscriptions}
                 onChange={(e) =>
                   handleSideMenuChange('filterSubscriptionsByAllowedChannels', e.target.checked)
                 }
@@ -290,13 +291,16 @@ const Options = () => {
           <div className="setting-item">
             <label className="toggle-label">
               <span className="setting-text">
-                <span className="setting-name">YouTube Music</span>
+                <span className="setting-name">YouTubeの他のサービス</span>
+                <span className="setting-description">
+                  YouTube Music、YouTube TVなど
+                </span>
               </span>
               <input
                 type="checkbox"
-                checked={settings.sideMenu.hideMusic}
+                checked={settings.sideMenu.hideOtherYouTubeServices}
                 onChange={(e) =>
-                  handleSideMenuChange('hideMusic', e.target.checked)
+                  handleSideMenuChange('hideOtherYouTubeServices', e.target.checked)
                 }
               />
               <span className="toggle-slider"></span>

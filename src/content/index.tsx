@@ -67,10 +67,8 @@ const generateStyles = (settings: Settings): string => {
 
   if (settings.sideMenu.hideSubscriptions) {
     css += `
-      /* 登録チャンネルボタン（メインメニュー内） */
-      ytd-guide-entry-renderer:has(a[href="/feed/subscriptions"]) { display: none !important; }
-      /* 登録チャンネルセクション（チャンネルリストを含む折りたたみ式セクション） */
-      ytd-guide-section-renderer:has(ytd-guide-collapsible-entry-renderer) { display: none !important; }
+      /* 登録チャンネルセクション全体（collapsible-section-entry-rendererと個別チャンネルを含む） */
+      ytd-guide-section-renderer:has(ytd-guide-collapsible-section-entry-renderer) { display: none !important; }
       /* ミニサイドバーの登録チャンネル */
       ytd-mini-guide-entry-renderer:has(a[href="/feed/subscriptions"]) { display: none !important; }
     `;
@@ -79,14 +77,36 @@ const generateStyles = (settings: Settings): string => {
   if (settings.sideMenu.hideExploreSection) {
     css += `
       /* 探索セクション全体を非表示（タイトルが表示されているセクション） */
-      ytd-guide-section-renderer:has(h3:not([hidden]) #guide-section-title) { display: none !important; }
+      /* ただし、外部リンク（YouTubeの他のサービス）を含むアイテムは除外 */
+      ytd-guide-section-renderer:has(h3:not([hidden]) #guide-section-title):not(:has(a[href*="music.youtube.com"])):not(:has(a[href*="tv.youtube.com"])):not(:has(a[href*="studio.youtube.com"])) { display: none !important; }
+      /* 探索セクション内の個別項目（トレンド、音楽、ゲームなど）で外部リンクでないものを非表示 */
+      ytd-guide-section-renderer:has(h3:not([hidden]) #guide-section-title) ytd-guide-entry-renderer:has(a[href^="/feed/"]):not(:has(a[href="/feed/subscriptions"])):not(:has(a[href="/feed/you"])) { display: none !important; }
+      ytd-guide-section-renderer:has(h3:not([hidden]) #guide-section-title) ytd-guide-entry-renderer:has(a[href^="/channel/"]) { display: none !important; }
+      /* 探索セクションのタイトルを非表示（項目が全て非表示の場合のため） */
+      ytd-guide-section-renderer:has(h3:not([hidden]) #guide-section-title) h3 { display: none !important; }
     `;
   }
 
-  if (settings.sideMenu.hideMusic) {
+  if (settings.sideMenu.hideOtherYouTubeServices) {
     css += `
+      /* YouTubeの他のサービスを非表示（YouTube Music、YouTube TVなど） */
+      /* 外部リンクや特定のサービスへのリンクを対象 */
       ytd-guide-entry-renderer:has(a[href*="music.youtube.com"]) { display: none !important; }
-      ytd-guide-entry-renderer:has(a[title="YouTube Music"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[href*="tv.youtube.com"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[href*="studio.youtube.com"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[href*="youtubei.googleapis.com"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[href*="youtubekids.com"]) { display: none !important; }
+      /* タイトルベースでも非表示（多言語対応） */
+      ytd-guide-entry-renderer:has(a[title*="Music"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[title*="TV"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[title*="Studio"]) { display: none !important; }
+      ytd-guide-entry-renderer:has(a[title*="Kids"]) { display: none !important; }
+      /* YouTubeの他のサービスセクションのヘッダーを非表示 */
+      /* このセクションは外部リンクを含むセクション */
+      ytd-guide-section-renderer:has(a[href*="music.youtube.com"]) h3,
+      ytd-guide-section-renderer:has(a[href*="tv.youtube.com"]) h3,
+      ytd-guide-section-renderer:has(a[href*="studio.youtube.com"]) h3,
+      ytd-guide-section-renderer:has(a[href*="youtubekids.com"]) h3 { display: none !important; }
     `;
   }
 
