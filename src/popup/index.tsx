@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Popup } from './Popup';
+import { Popup } from './popup';
 
 const root = document.getElementById('root');
 if (root) {
