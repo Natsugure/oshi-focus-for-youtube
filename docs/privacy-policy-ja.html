@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プライバシーポリシー - Oshi Focus For YouTube</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+        .last-updated {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+        }
+        h2 {
+            font-size: 1.6em;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            color: #764ba2;
+        }
+        h3 {
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        ul {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .highlight-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        strong {
+            color: #764ba2;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← トップページに戻る</a>
+
+        <h1>プライバシーポリシー</h1>
+        <p class="last-updated">最終更新日: 2025年11月26日</p>
+
+        <h2>概要</h2>
+        <p>Oshi Focus For YouTube（以下「本拡張機能」）は、ユーザーのプライバシーを尊重します。本プライバシーポリシーでは、本拡張機能が収集、使用、保存するデータについて説明します。</p>
+
+        <h2>収集するデータ</h2>
+        <p>本拡張機能は、以下のデータをお使いのブラウザ内にのみ保存します：</p>
+
+        <h3>1. ユーザー設定情報</h3>
+        <ul>
+            <li>許可したYouTubeチャンネルのリスト（チャンネルIDとチャンネル名）</li>
+            <li>表示/非表示に関する設定</li>
+            <li>ショート動画の取り扱い設定</li>
+        </ul>
+        <p>これらの情報は、Chrome Sync Storage APIを使用してブラウザ内に保存され、Googleアカウントで同期される場合があります。</p>
+
+        <h2>データの使用目的</h2>
+        <p>収集したデータは、以下の目的でのみ使用されます：</p>
+        <ul>
+            <li>ユーザーが許可したチャンネルのコンテンツのみを表示する</li>
+            <li>ユーザーの設定に基づいてYouTubeの表示をカスタマイズする</li>
+            <li>ブラウザを再起動してもユーザー設定を維持する</li>
+        </ul>
+
+        <h2>データの保存場所</h2>
+        <div class="highlight-box">
+            <p><strong>すべてのデータはお使いのブラウザ内にのみ保存されます。</strong></p>
+        </div>
+        <p>本拡張機能は：</p>
+        <ul>
+            <li>外部サーバーにデータを送信しません</li>
+            <li>第三者とデータを共有しません</li>
+            <li>分析ツールやトラッキングを使用しません</li>
+            <li>インターネット接続なしでも機能します（YouTube自体を除く）</li>
+        </ul>
+
+        <h2>データへのアクセス</h2>
+        <p>収集されたデータにアクセスできるのは、ユーザー本人のみです。開発者を含む第三者は、ユーザーのデータにアクセスできません。</p>
+
+        <h2>データの削除</h2>
+        <p>ユーザーは以下の方法でデータを削除できます：</p>
+        <ol>
+            <li><strong>拡張機能の設定から個別に削除</strong>: 許可リストから各チャンネルを削除</li>
+            <li><strong>拡張機能をアンインストール</strong>: すべてのデータが削除されます</li>
+            <li><strong>ブラウザのストレージをクリア</strong>: <code>chrome://settings/clearBrowserData</code> からChromeのストレージをクリア</li>
+        </ol>
+
+        <h2>権限の使用</h2>
+        <p>本拡張機能は以下の権限を使用します：</p>
+
+        <h3>storage</h3>
+        <p>ユーザーの許可チャンネルリストと設定を保存するために使用します。</p>
+
+        <h3>tabs</h3>
+        <p>現在表示中のYouTubeチャンネル情報を取得し、ワンクリックで許可リストに追加できる機能を提供するために使用します。</p>
+
+        <h3>host_permissions (youtube.com)</h3>
+        <p>YouTube上でのみ動作し、サイドバーやリコメンド欄の表示制御、動画のブロック機能を提供するために使用します。</p>
+
+        <h2>第三者サービス</h2>
+        <p>本拡張機能は、いかなる第三者サービスとも連携しません。すべての処理はローカルで行われます。</p>
+
+        <h2>子供のプライバシー</h2>
+        <p>本拡張機能は、13歳未満の子供から意図的にデータを収集しません。</p>
+
+        <h2>プライバシーポリシーの変更</h2>
+        <p>本プライバシーポリシーを変更する場合は、このページで更新します。重要な変更がある場合は、拡張機能の更新情報でお知らせします。</p>
+
+        <h2>お問い合わせ</h2>
+        <p>本プライバシーポリシーに関するご質問がある場合は、以下までお問い合わせください：</p>
+        <p><a href="https://github.com/Natsugure/oshi-focus-for-youtube/issues" style="color: #667eea;">GitHubリポジトリのIssues</a></p>
+
+        <h2>同意</h2>
+        <p>本拡張機能を使用することで、本プライバシーポリシーに同意したものとみなされます。</p>
+
+        <div style="margin-top: 50px; padding-top: 30px; border-top: 1px solid #e0e0e0; color: #888; font-size: 0.9em; text-align: center;">
+            <p>&copy; 2025 Oshi Focus For YouTube. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
